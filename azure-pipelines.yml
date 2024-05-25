@@ -1,4 +1,4 @@
-name: '4.3$(rev:.r)'
+name: '5.0.$(rev:r)'
 
 trigger:
   batch: true
@@ -17,9 +17,18 @@ stages:
 - stage: 'Build'
   displayName: 'Build'
   jobs:
-  - job: 
+  - job:
     displayName: 'Build on Windows'
     steps:
+    - task: AzureCLI@2
+      displayName: 'Fetch profile for Service Principal'
+      inputs:
+        azureSubscription: test
+        scriptType: pscore
+        scriptLocation: inlineScript
+        inlineScript: |
+          az rest -u https://app.vssps.visualstudio.com/_apis/profile/profiles/me --resource 499b84ac-1321-427f-aa17-267ca6975798
+
     - task: NodeTool@0
       inputs:
         versionSpec: '16.x'
@@ -47,6 +56,15 @@ stages:
         test-path $vswherePath -PathType Leaf
       displayName: 'Grab the latest version of vswhere.exe for v4'
 
+    - powershell: |
+        $vswhereLatest = "https://github.com/Microsoft/vswhere/releases/latest/download/vswhere.exe"
+        $vswherePath = ".\BuildTasks\PublishVSExtension\v5\tools\vswhere.exe"
+        remove-item $vswherePath -ErrorAction SilentlyContinue
+        mkdir ".\BuildTasks\PublishVSExtension\v4\tools\" -force
+        invoke-webrequest $vswhereLatest -OutFile $vswherePath
+        test-path $vswherePath -PathType Leaf
+      displayName: 'Grab the latest version of vswhere.exe for v5'
+
     - task: Npm@1
       displayName: 'Build the extension'
       inputs:
@@ -54,20 +72,20 @@ stages:
         verbose: false
         customCommand: 'run build'
 
-    - task: TfxInstaller@4
+    - task: TfxInstaller@5
       displayName: 'Use Node CLI for Azure DevOps'
       inputs:
         version: '0.x'
         checkLatest: true
 
-    - task: PackageAzureDevOpsExtension@4
+    - task: PackageAzureDevOpsExtension@5
       displayName: 'Package Extension: $(Build.SourcesDirectory)'
       name: 'packageStep'
       inputs:
         rootFolder: '$(Build.SourcesDirectory)'
-        outputPath: '$(Build.ArtifactStagingDirectory)\vsts-developer-tools-build-tasks.vsix'
-        publisherId: 'ms-devlabs'
-        extensionId: 'vsts-developer-tools-build-tasks'
+        outputPath: '$(Build.ArtifactStagingDirectory)\vs-marketplace-build-tasks.vsix'
+        publisherId: 'winstonliu'
+        extensionId: 'vs-marketplace-build-tasks'
         extensionTag: '-build'
         extensionName: 'Azure DevOps Extension Tasks'
         extensionVersion: '$(Build.BuildNumber)'
@@ -88,9 +106,9 @@ stages:
   condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
   dependsOn: 'Build'
   jobs:
-    - deployment: 
+    - deployment:
       environment: dev
-      strategy: 
+      strategy:
         runOnce:
          deploy:
           steps:
@@ -99,28 +117,27 @@ stages:
               versionSpec: '16.x'
             displayName: 'Install Node.js'
 
-          - task: TfxInstaller@4
+          - task: TfxInstaller@5
             displayName: 'Use Node CLI for Azure DevOps'
             inputs:
               version: '0.x'
               checkLatest: true
 
-          - task: PublishAzureDevOpsExtension@4
+          - task: PublishAzureDevOpsExtension@5
             name: 'publishDev'
             inputs:
               connectTo: 'VsTeam'
               connectedServiceName: 'marketplaceServiceConnection'
               fileType: 'vsix'
-              vsixFile: '$(Pipeline.Workspace)/vsix/vsts-developer-tools-build-tasks.vsix'
+              vsixFile: '$(Pipeline.Workspace)/vsix/vs-marketplace-tools-build-tasks.vsix'
               publisherId: 'ms-devlabs'
-              extensionId: 'vsts-developer-tools-build-tasks'
-              extensionTag: '-dev'
+              extensionId: 'vs-marketplace-tools-build-tasks'
+              # extensionTag: '-dev'
               updateTasksVersion: false
               extensionVisibility: 'private'
-              shareWith: 'jessehouwing-dev'
-              noWaitValidation: true
+              shareWith: 'wliu1402'
 
-          - task: IsAzureDevOpsExtensionValid@4
+          - task: IsAzureDevOpsExtensionValid@5
             inputs:
               connectTo: 'VsTeam'
               connectedServiceName: 'marketplaceServiceConnection'
@@ -134,68 +151,3 @@ stages:
               targetPath: '$(publishDev.Extension.OutputPath)'
               artifact: 'dev'
             condition: succeededOrFailed()
-
-- stage: PublishProd
-  displayName: 'Publish publicly to MsDevLabs'
-  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
-  dependsOn: 'PublishDev'
-  jobs:
-    - deployment: 
-      environment: public-vsts-developer-tools-build-tasks
-      strategy: 
-        runOnce:
-         deploy:
-          steps:
-          - task: NodeTool@0
-            inputs:
-              versionSpec: '16.x'
-            displayName: 'Install Node.js'
-            
-          - task: TfxInstaller@4
-            displayName: 'Use Node CLI for Azure DevOps'
-            inputs:
-              version: '0.x'
-              checkLatest: true
-
-          - task: PublishAzureDevOpsExtension@4
-            name: 'publishProd'
-            inputs:
-              connectTo: 'VsTeam'
-              connectedServiceName: 'marketplaceServiceConnection'
-              fileType: 'vsix'
-              vsixFile: '$(Pipeline.Workspace)/vsix/vsts-developer-tools-build-tasks.vsix'
-              publisherId: 'ms-devlabs'
-              extensionId: 'vsts-developer-tools-build-tasks'
-              updateTasksVersion: false
-              extensionVisibility: 'public'
-              noWaitValidation:  true
-          
-          - task: IsAzureDevOpsExtensionValid@4
-            inputs:
-              connectTo: 'VsTeam'
-              connectedServiceName: 'marketplaceServiceConnection'
-              method: 'vsix'
-              vsixFile: '$(publishProd.Extension.OutputPath)'
-
-          - task: PublishPipelineArtifact@1
-            displayName: 'Publish vsix'
-            inputs:
-              publishLocation: pipeline
-              targetPath: '$(publishProd.Extension.OutputPath)'
-              artifact: 'prod'
-            condition: succeededOrFailed()
-
-          - task: GitHubRelease@1
-            inputs:
-              gitHubConnection: 'microsoft/azure-devops-extension-tasks'
-              repositoryName: '$(Build.Repository.Name)'
-              action: 'create'
-              target: '$(Build.SourceVersion)'
-              tagSource: 'userSpecifiedTag'
-              tag: 'v$(Build.BuildNumber)'
-              title: 'v$(Build.BuildNumber)'
-              releaseNotesSource: 'inline'
-              assets: '$(publishProd.Extension.OutputPath)*'
-              changeLogCompareToRelease: 'lastFullRelease'
-              changeLogType: 'issueBased'
-              changeLogLabels: '[{ "state" : "closed" }]'

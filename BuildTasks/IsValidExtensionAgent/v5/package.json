@@ -1,6 +1,6 @@
 {
   "name": "vsts-developer-tools.isvalidextensionagentv5",
-  "version": "5.0.0",
+  "version": "5.0.2",
   "description": "Is Valid Extension Agent Task",
   "repository": {
     "type": "git",

@@ -97,7 +97,8 @@ stages:
   condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
   dependsOn: 'Build'
   jobs:
-    - deployment:
+    - deployment: PublishDev
+      displayName: Publish privately
       environment: dev
       strategy:
         runOnce:

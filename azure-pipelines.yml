@@ -119,11 +119,11 @@ stages:
             name: 'publishDev'
             inputs:
               connectTo: 'AzureRM'
-              connectedServiceNameAzureRM: 'test'
+              connectedServiceNameAzureRM: 'Test'
               fileType: 'vsix'
-              vsixFile: '$(Pipeline.Workspace)/vsix/vs-marketplace-tools-build-tasks.vsix'
-              publisherId: 'ms-devlabs'
-              extensionId: 'vs-marketplace-tools-build-tasks'
+              vsixFile: '$(Pipeline.Workspace)/vsix/vs-marketplace-build-tasks.vsix'
+              publisherId: 'winstonliu'
+              extensionId: 'vs-marketplace-build-tasks'
               # extensionTag: '-dev'
               updateTasksVersion: false
               extensionVisibility: 'private'
@@ -132,7 +132,7 @@ stages:
           - task: IsAzureDevOpsExtensionValid@5
             inputs:
               connectTo: 'AzureRM'
-              connectedServiceNameAzureRM: 'test'
+              connectedServiceNameAzureRM: 'Test'
               method: 'vsix'
               vsixFile: '$(publishDev.Extension.OutputPath)'
 

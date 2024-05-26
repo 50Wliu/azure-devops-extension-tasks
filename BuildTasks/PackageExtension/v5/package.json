@@ -1,6 +1,6 @@
 {
   "name": "vsts-developer-tools.packageextensionv5",
-  "version": "5.0.10",
+  "version": "5.0.11",
   "description": "Package Extension Task",
   "repository": {
     "type": "git",

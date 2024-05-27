@@ -1,6 +1,6 @@
 {
   "name": "vsts-developer-tools.installextensionv5",
-  "version": "5.0.11",
+  "version": "5.0.12",
   "description": "Install Extension Task",
   "repository": {
     "type": "git",

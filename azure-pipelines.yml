@@ -122,12 +122,12 @@ stages:
               connectedServiceNameAzureRM: 'Test'
               fileType: 'vsix'
               vsixFile: '$(Pipeline.Workspace)/vsix/vs-marketplace-build-tasks.vsix'
-              publisherId: 'winstonliu'
-              extensionId: 'vs-marketplace-build-tasks'
+              # publisherId: 'winstonliu'
+              # extensionId: 'vs-marketplace-build-tasks'
               # extensionTag: '-dev'
-              updateTasksVersion: false
-              extensionVisibility: 'private'
-              shareWith: 'wliu1402'
+              # updateTasksVersion: false
+              # extensionVisibility: 'private'
+              # shareWith: 'wliu1402'
 
           - task: IsAzureDevOpsExtensionValid@5
             inputs:
